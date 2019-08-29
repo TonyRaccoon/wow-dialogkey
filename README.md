@@ -1,2 +1,4 @@
 # wow-dialogkey
-Allows you to accept dialogs, progress quests, etc. with the spacebar in WoW
+https://www.curseforge.com/wow/addons/dialogkey
+
+Adds the ability to bind a button (default: spacebar) that can accept popup dialogs, select quests at quest givers, complete quests, etc. when pressed.
