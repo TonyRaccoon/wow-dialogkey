@@ -380,6 +380,9 @@ function DialogKey:EnumerateGossips_Gossip()	-- Prefixes 1., 2., etc. to NPC opt
 				frame:SetText(num .. ". " .. frame:GetText())
 			end
 			
+			-- Make the button taller if the text inside is wrapped to multiple lines
+			frame:SetHeight(frame:GetFontString():GetHeight()+2)
+			
 			num = num+1
 		end
 	end
@@ -398,6 +401,9 @@ function DialogKey:EnumerateGossips_Quest()		-- Prefixes 1., 2., etc. to NPC opt
 			if not frame:GetText():find("^"..num.."\. ") then
 				frame:SetText(num .. ". " .. frame:GetText())
 			end
+			
+			-- Make the button taller if the text inside is wrapped to multiple lines
+			frame:SetHeight(frame:GetFontString():GetHeight()+2)
 			
 			num = num+1
 		end
