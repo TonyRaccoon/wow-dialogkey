@@ -2,7 +2,7 @@
 ## Title: DialogKey
 ## Notes: Lets you hit a key to confirm loot/purchase dialogs, accept/complete quests, select quest rewards, etc. Hit 2 to select a reward then spacebar to complete quests? Easy!
 ## Author: Foxthorn
-## Version: 1.7.4
+## Version: 1.8
 ## SavedVariables: DialogKeyDB
 ## OptionalDeps: Ace3
 ## X-Embeds: Ace3
