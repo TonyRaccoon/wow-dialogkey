@@ -139,16 +139,11 @@ function DialogKey:HandleKey(key)				-- Run for every key hit ever; runs ClickBu
 	
 	if GetCurrentKeyBoardFocus() then return end -- Don't handle key if we're typing into something
 	
-	if key:find("^%d$") and (QuestFrameGreetingPanel:IsVisible() or GossipFrameGreetingPanel:IsVisible()) and DialogKey.db.global.numKeysForGossip then
+	if key:find("^%d$") and GossipFrameGreetingPanel:IsVisible() and DialogKey.db.global.numKeysForGossip then
 		local num = 1
 		local keynum = tonumber(key)
 		for i=1,9 do
-			local frame = _G["GossipTitleButton"..i]
-			
-			-- Try QuestTitleButton* instead if Gossip buttons aren't shown
-			if not frame or not frame:IsVisible() then
-				frame = _G["QuestTitleButton"..i]
-			end
+			local frame = GossipFrame.buttons[i]
 			
 			-- If the frame isn't blank (blank frames are used to separate gossip and quests)
 			if frame and frame:IsVisible() and frame:GetText() then
@@ -159,6 +154,18 @@ function DialogKey:HandleKey(key)				-- Run for every key hit ever; runs ClickBu
 				end
 				
 				num = num+1
+			end
+		end
+	elseif key:find("^%d$") and QuestFrameGreetingPanel:IsVisible() and DialogKey.db.global.numKeysForGossip then
+		local frames = DialogKey:GetQuestButtons()
+
+		for _, entry in pairs(frames) do
+			framename = entry.name
+			frame_matches = framename:find("^"..key..".")
+			if frame_matches then
+				DialogKey:ClickFrame(entry.frame)
+				self:SetPropagateKeyboardInput(false)
+				return
 			end
 		end
 	
@@ -235,15 +242,18 @@ function DialogKey:ClickButtons()				-- Main function to click on dialog buttons
 		elseif framename == "GossipTitleButton1" and GossipFrame:IsVisible() then
 			-- Try clicking the first gossip option with a completed quest icon -- also check if it's visible, since frames are reused and it might get stuck trying to click a leftover, invisible active quest button
 			for i=1,9 do
-				if _G["GossipTitleButton"..i.."GossipIcon"]:IsVisible() and (
-					_G["GossipTitleButton"..i.."GossipIcon"]:GetTexture() == "Interface\\GossipFrame\\ActiveQuestIcon" or
-					_G["GossipTitleButton"..i.."GossipIcon"]:GetTexture() == "Interface\\GossipFrame\\ActiveLegendaryQuestIcon") then
-					return DialogKey:ClickFrameName("GossipTitleButton"..i)
+				if GossipFrame_GetTitleButton(i) then
+					if GossipFrame_GetTitleButton(i).Icon:IsVisible() and (
+						GossipFrame_GetTitleButton(i).Icon:GetTexture() == "Interface\\GossipFrame\\ActiveQuestIcon" or
+						GossipFrame_GetTitleButton(i).Icon:GetTexture() == "Interface\\GossipFrame\\ActiveLegendaryQuestIcon") then
+					
+						return DialogKey:ClickFrame(GossipFrame_GetTitleButton(i))
+					end
 				end
 			end
 			
 			-- If none were found, just click the first one
-			return DialogKey:ClickFrameName("GossipTitleButton1")
+			return DialogKey:ClickFrame(GossipFrame_GetTitleButton(1))
 		
 		elseif DialogKey:ClickFrameName(framename) then
 			return true
@@ -326,38 +336,23 @@ end
 function DialogKey:GetQuestButtons()			-- Return sorted list of quest button frames
 	-- TODO: fix order being wrong on first load?
 	local frames = {}
+	for f,unknown in QuestFrameGreetingPanel.titleButtonPool:EnumerateActive() do
+		table.insert(frames,{
+			top      = f:GetTop(),
+			frame    = f,
+			name     = f:GetText()
+		})
+	end
 	
-	if QuestFrameGreetingPanel.titleButtonPool then
-		for f,unknown in QuestFrameGreetingPanel.titleButtonPool:EnumerateActive() do
-			table.insert(frames,{
-				top      = f:GetTop(),
-				frame    = f,
-				name     = f:GetText()
-			})
+	table.sort(frames,function(a,b)
+		if a.top > b.top then
+			return 1
+		elseif a.top < b.top then
+			return -1
 		end
 		
-		table.sort(frames,function(a,b)
-			if a.top > b.top then
-				return 1
-			elseif a.top < b.top then
-				return -1
-			end
-			
-			return 0
-		end)
-	elseif QuestTitleButton1:IsVisible() then
-		for i=1,10 do
-			local frame = _G["QuestTitleButton"..i]
-			
-			if frame:IsVisible() and frame:GetText() ~= "" then
-				table.insert(frames, {
-					top   = frame:GetTop(),
-					frame = frame,
-					name  = frame:GetText()
-				})
-			end
-		end
-	end
+		return 0
+	end)
 	
 	return frames
 end
@@ -367,24 +362,16 @@ function DialogKey:EnumerateGossips_Gossip()	-- Prefixes 1., 2., etc. to NPC opt
 	if not GossipFrameGreetingPanel:IsVisible() and not QuestFrameGreetingPanel:IsVisible() then return end
 	
 	local num = 1
-	for i=1,9 do
-		local frame
-		if GossipFrame:IsVisible() then
-			frame = _G["GossipTitleButton"..i]
-		else
-			frame = _G["QuestTitleButton"..i]
+
+	availableOptions = GossipFrame.buttons
+	for i=1,math.min(9, table.getn(availableOptions)) do
+		local frame = availableOptions[i]
+		-- print(frame)
+		if not frame:GetText():find("^"..num.."\. ") then
+			frame:SetText(num .. ". " .. frame:GetText())
 		end
 		
-		if frame:IsVisible() and frame:GetText() then
-			if not frame:GetText():find("^"..num.."\. ") then
-				frame:SetText(num .. ". " .. frame:GetText())
-			end
-			
-			-- Make the button taller if the text inside is wrapped to multiple lines
-			frame:SetHeight(frame:GetFontString():GetHeight()+2)
-			
-			num = num+1
-		end
+		num = num+1
 	end
 end
 
@@ -393,7 +380,6 @@ function DialogKey:EnumerateGossips_Quest()		-- Prefixes 1., 2., etc. to NPC opt
 	if not GossipFrameGreetingPanel:IsVisible() and not QuestFrameGreetingPanel:IsVisible() then return end
 	
 	local frames = DialogKey:GetQuestButtons()
-	
 	local num = 1
 	for i,f in pairs(frames) do
 		local frame = f.frame
@@ -401,9 +387,6 @@ function DialogKey:EnumerateGossips_Quest()		-- Prefixes 1., 2., etc. to NPC opt
 			if not frame:GetText():find("^"..num.."\. ") then
 				frame:SetText(num .. ". " .. frame:GetText())
 			end
-			
-			-- Make the button taller if the text inside is wrapped to multiple lines
-			frame:SetHeight(frame:GetFontString():GetHeight()+2)
 			
 			num = num+1
 		end
@@ -492,7 +475,7 @@ function DialogKey:DisableQuestScrolling()		-- Frees up mouse wheel input again 
 	end
 	
 	if not found then
-		UIParent:EnableMouseWheel(false) -- todo: erroring sometimes?
+		UIParent:EnableMouseWheel(false)
 	end
 end
 
