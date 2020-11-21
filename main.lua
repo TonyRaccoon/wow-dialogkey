@@ -474,7 +474,7 @@ function DialogKey:DisableQuestScrolling()		-- Frees up mouse wheel input again 
 		end
 	end
 	
-	if not found then
+	if not found and not UnitAffectingCombat("player") then
 		UIParent:EnableMouseWheel(false)
 	end
 end
